@@ -1,0 +1,19 @@
+<?php
+/**
+ * Created by Grupo B+M
+ * User: Esdras Castro
+ * Date: 02/09/2016
+ */
+include "MailSender.php";
+
+$mailsender = new mailsender\MailSender();
+echo $mailsender
+    ->addTo('esdras@castro.com')
+    ->addBcc('teste2@teste.com')
+    ->addBcc('tester','teste@teste.com')
+    ->addCc('teste3@teste.com')
+    ->addCc('tester3','teste@teste2.com')
+    ->addFrom('Ed','ed@hot.com')
+    ->addReplyTo('esdras','ed@castro.com')
+    ->send()
+    ->getMessage();
