@@ -3,9 +3,11 @@
  * Created by Grupo B+M
  * User: Esdras Castro
  * Date: 02/09/2016
+ * Last Update: 12/11/216
+ * Version 1.1
  */
 
-namespace mailsender;
+namespace Lib\Tools;
 
 
 class MailSender
@@ -27,12 +29,19 @@ class MailSender
     private $status;
 
     function __construct(){
-        array_push($this->domainsAllowed, 'tempsite.ws', 'locaweb.com.br','hospedagemdesites.ws','websiteseguro.com');
         array_push($this->priorityAllowed, 1,3,5);
         $this->errormsg = '';
         $this->priority = 3;
         $this->dispositionNotificationTo = '';
         $this->status = false;
+    }
+
+    public function addToDomainsAllowed($domain="")
+    {
+        if(!empty($domain))
+            array_push($this->domainsAllowed, str_replace(array('http://', 'https://', 'http://www', 'https://www'),"",$domain));
+
+        return $this;
     }
 
     /**
@@ -268,7 +277,7 @@ class MailSender
      * @param string $variableName
      * @return string
      */
-    public function preparingEmail($variableName='')
+    protected function preparingEmail($variableName='')
     {
         if(!empty($variableName) and property_exists($this, $variableName)){
             if(self::hasEmail($this->$variableName)){
@@ -328,13 +337,48 @@ class MailSender
         $headers = "MIME-Version: 1.1" . $this->linebreaks;
         $headers .= "Content-type: text/html; charset=iso-8859-1" . $this->linebreaks;
         $headers .= "From: " . $from . $this->linebreaks;
-        $headers .= !empty($bcc) ? "Bcc: " . $bcc . $this->linebreaks : '';
-        $headers .= !empty($cc) ? "Cc: " . $cc . $this->linebreaks : '';
-        $headers .= !empty($this->priority) ? "X-Priority: " . $this->priority . $this->linebreaks : '';
-        $headers .= "Reply-To: " . (!empty($reply) ? $reply . $this->linebreaks : $from . $this->linebreaks);
+        $headers .= !empty($bcc) ? ("Bcc: " . $bcc . $this->linebreaks) : '';
+        $headers .= !empty($cc) ? ("Cc: " . $cc . $this->linebreaks) : '';
+        $headers .= !empty($this->priority) ? ("X-Priority: " . $this->priority . $this->linebreaks) : '';
+        $headers .= "Reply-To: " . (!empty($reply) ? ($reply . $this->linebreaks) : ($from . $this->linebreaks));
 
         $this->headers = $headers;
 
+    }
+
+    public function getPreview()
+    {
+        $from = self::preparingEmail('from');
+        $to = self::preparingEmail('to');
+
+        if(empty($this->errormsg)){
+            if(empty($to) || empty($from)){
+                $this->errormsg = "O email de remetente e/ou destinatário não foram informados.";
+            } else {
+                $this->createHeader();
+                if(self::sistemaOperacional()==1){
+                    return "
+                        SO: Linux<br>
+                        To: {$to}<br>
+                        From: {$from}<br>
+                        Subject: {$this->subject}<br>
+                        Message: {$this->message}<br>
+                        Headers: <pre>{$this->headers}</pre><br>
+                    ";
+                } elseif (self::sistemaOperacional()==2) {
+                    $this->headers .= "Return-Path: " . $from . $this->linebreaks;
+
+                    return "
+                        SO: Windows<br>
+                        To: {$to}<br>
+                        From: {$from}<br>
+                        Subject: {$this->subject}<br>
+                        Message: {$this->message}<br>
+                        Headers: <pre>{$this->headers}</pre><br>
+                    ";
+                }
+            }
+        }
     }
 
     public function getMessage()
@@ -356,6 +400,8 @@ class MailSender
             if(empty($to) || empty($from)){
                 $this->errormsg = "O email de remetente e/ou destinatário não foram informados.";
             } else {
+                $this->createHeader();
+
                 if(self::sistemaOperacional()==1){
                     if(@mail($to, $this->subject, $this->message, $this->headers, "-r" . $from)){
                         $this->status = true;
